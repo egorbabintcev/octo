@@ -8,3 +8,7 @@ type CreateWebhookRequest struct {
 	Passcode    string `json:"passcode"`
 	Description string `json:"description,omitempty"`
 }
+
+type DeleteWebhookRequest struct {
+	ID string
+}

@@ -7,3 +7,5 @@ type errResponse struct {
 type CreateWebhookResponse struct {
 	ID string `json:"id"`
 }
+
+type DeleteWebhookResponse struct{}
