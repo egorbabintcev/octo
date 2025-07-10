@@ -10,6 +10,8 @@ import (
 	"net/http"
 )
 
+const BASE_URL = "https://api.figma.com/v2"
+
 type Client struct {
 	logger     *slog.Logger
 	httpClient http.Client
@@ -32,14 +34,14 @@ func (c *Client) CreateWebhook(ctx context.Context, r CreateWebhookRequest) (Cre
 	}
 
 	reqBody := bytes.NewReader(reqJson)
-	req, err := http.NewRequestWithContext(ctx, "POST", "https://api.figma.com/v2/webhooks", reqBody)
-
-	req.Header.Set("X-FIGMA-TOKEN", c.token)
-	req.Header.Set("Content-Type", "application/json")
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/webhooks", BASE_URL), reqBody)
 
 	if err != nil {
 		return CreateWebhookResponse{}, fmt.Errorf("%w: %v", ErrUnknown, err)
 	}
+
+	req.Header.Set("X-FIGMA-TOKEN", c.token)
+	req.Header.Set("Content-Type", "application/json")
 
 	res, err := c.httpClient.Do(req)
 
@@ -62,15 +64,14 @@ func (c *Client) CreateWebhook(ctx context.Context, r CreateWebhookRequest) (Cre
 			return CreateWebhookResponse{}, fmt.Errorf("%w: %v", ErrUnknown, err)
 		}
 
-		if res.StatusCode == http.StatusUnauthorized || res.StatusCode == http.StatusForbidden {
+		switch res.StatusCode {
+		case http.StatusUnauthorized, http.StatusForbidden:
 			return CreateWebhookResponse{}, fmt.Errorf("%w: %v", ErrInvalidCredentials, errRes.Message)
-		}
-
-		if res.StatusCode == http.StatusBadRequest {
+		case http.StatusBadRequest:
 			return CreateWebhookResponse{}, fmt.Errorf("%w: %v", ErrInvalidRequest, errRes.Message)
+		default:
+			return CreateWebhookResponse{}, ErrUnknown
 		}
-
-		return CreateWebhookResponse{}, ErrUnknown
 	}
 
 	wh := CreateWebhookResponse{}
