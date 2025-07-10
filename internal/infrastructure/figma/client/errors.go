@@ -6,4 +6,5 @@ var (
 	ErrUnknown            = errors.New("unknown error")
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrInvalidRequest     = errors.New("invalid request data")
+	ErrNotFound           = errors.New("webhook not found")
 )
