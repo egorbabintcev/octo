@@ -1,0 +1,15 @@
+version: "2"
+
+sql:
+  - engine: "sqlite"
+    schema: "./internal/infrastructure/db/migrations"
+    queries: "./internal/infrastructure/db/queries" 
+    gen:
+      go:
+        package: "database"
+        out: "internal/infrastructure/db/gen"
+        overrides:
+        - db_type: "INTEGER"
+          go_type:
+            type: "int"
+

@@ -6,6 +6,9 @@
 *.dylib
 __debug*
 
+# Codegen
+internal/infrastructure/db/gen
+
 # Test binary, built with `go test -c`
 *.test
 
