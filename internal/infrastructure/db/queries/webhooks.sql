@@ -31,7 +31,7 @@ INSERT INTO webhooks (
   @contextID,
   @endpoing,
   @passcode,
-  COALESCE(NULLIF(@description, ''), NULL)
+  sqlc.narg('description')
 ) RETURNING "id";
 
 -- name: DeleteWebhook :exec

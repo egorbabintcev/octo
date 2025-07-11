@@ -76,7 +76,10 @@ func (s *Storage) Create(ctx context.Context, eventType, contextType, contextID,
 		ContextID:   contextID,
 		Endpoing:    endpoint,
 		Passcode:    passcode,
-		Description: description,
+		Description: sql.NullString{
+			Valid:  description != "",
+			String: description,
+		},
 	})
 	var sqliteErr *sqlite.Error
 	if errors.As(err, &sqliteErr) {
