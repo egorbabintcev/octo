@@ -28,14 +28,12 @@ func NewClient(l *slog.Logger, token string) *Client {
 
 func (c *Client) CreateWebhook(ctx context.Context, r CreateWebhookRequest) (CreateWebhookResponse, error) {
 	reqJson, err := json.Marshal(r)
-
 	if err != nil {
 		return CreateWebhookResponse{}, fmt.Errorf("%w: %v", ErrUnknown, err)
 	}
 
 	reqBody := bytes.NewReader(reqJson)
 	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/webhooks", BASE_URL), reqBody)
-
 	if err != nil {
 		return CreateWebhookResponse{}, fmt.Errorf("%w: %v", ErrUnknown, err)
 	}
@@ -44,43 +42,38 @@ func (c *Client) CreateWebhook(ctx context.Context, r CreateWebhookRequest) (Cre
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err := c.httpClient.Do(req)
-
 	if err != nil {
 		return CreateWebhookResponse{}, fmt.Errorf("%w: %v", ErrUnknown, err)
 	}
-
 	defer res.Body.Close()
 
 	resBody, err := io.ReadAll(res.Body)
-
 	if err != nil {
 		return CreateWebhookResponse{}, fmt.Errorf("%w: %v", ErrUnknown, err)
 	}
 
-	if res.StatusCode != http.StatusOK {
-		errRes := errResponse{}
-
-		if err := json.Unmarshal(resBody, &errRes); err != nil {
-			return CreateWebhookResponse{}, fmt.Errorf("%w: %v", ErrUnknown, err)
+	if res.StatusCode == http.StatusOK {
+		var wh CreateWebhookResponse
+		if err := json.Unmarshal(resBody, &wh); err != nil {
+			return CreateWebhookResponse{}, nil
 		}
 
-		switch res.StatusCode {
-		case http.StatusUnauthorized, http.StatusForbidden:
-			return CreateWebhookResponse{}, fmt.Errorf("%w: %v", ErrInvalidCredentials, errRes.Message)
-		case http.StatusBadRequest:
-			return CreateWebhookResponse{}, fmt.Errorf("%w: %v", ErrInvalidRequest, errRes.Message)
-		default:
-			return CreateWebhookResponse{}, ErrUnknown
-		}
+		return wh, nil
 	}
 
-	wh := CreateWebhookResponse{}
-
-	if err := json.Unmarshal(resBody, &wh); err != nil {
-		return CreateWebhookResponse{}, nil
+	var errRes errResponse
+	if err := json.Unmarshal(resBody, &errRes); err != nil {
+		return CreateWebhookResponse{}, fmt.Errorf("%w: %v", ErrUnknown, err)
 	}
 
-	return wh, nil
+	switch res.StatusCode {
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return CreateWebhookResponse{}, fmt.Errorf("%w: %v", ErrInvalidCredentials, errRes.Message)
+	case http.StatusBadRequest:
+		return CreateWebhookResponse{}, fmt.Errorf("%w: %v", ErrInvalidRequest, errRes.Message)
+	default:
+		return CreateWebhookResponse{}, ErrUnknown
+	}
 }
 
 func (c *Client) DeleteWebhook(ctx context.Context, r DeleteWebhookRequest) (DeleteWebhookResponse, error) {
@@ -96,35 +89,33 @@ func (c *Client) DeleteWebhook(ctx context.Context, r DeleteWebhookRequest) (Del
 	req.Header.Set("X-FIGMA-TOKEN", c.token)
 
 	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return DeleteWebhookResponse{}, fmt.Errorf("%w: %v", ErrUnknown, err)
+	}
+	defer res.Body.Close()
 
+	if res.StatusCode == http.StatusOK {
+		return DeleteWebhookResponse{}, nil
+	}
+
+	resBody, err := io.ReadAll(res.Body)
 	if err != nil {
 		return DeleteWebhookResponse{}, fmt.Errorf("%w: %v", ErrUnknown, err)
 	}
 
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		errRes := errResponse{}
-
-		resBody, err := io.ReadAll(res.Body)
-		if err != nil {
-			return DeleteWebhookResponse{}, fmt.Errorf("%w: %v", ErrUnknown, err)
-		}
-		if err := json.Unmarshal(resBody, &errRes); err != nil {
-			return DeleteWebhookResponse{}, fmt.Errorf("%w: %v", ErrUnknown, err)
-		}
-
-		switch res.StatusCode {
-		case http.StatusUnauthorized, http.StatusForbidden:
-			return DeleteWebhookResponse{}, fmt.Errorf("%w: %v", ErrInvalidCredentials, errRes.Message)
-		case http.StatusBadRequest:
-			return DeleteWebhookResponse{}, fmt.Errorf("%w: %v", ErrInvalidRequest, errRes.Message)
-		case http.StatusNotFound:
-			return DeleteWebhookResponse{}, ErrNotFound
-		default:
-			return DeleteWebhookResponse{}, ErrUnknown
-		}
+	var errRes errResponse
+	if err := json.Unmarshal(resBody, &errRes); err != nil {
+		return DeleteWebhookResponse{}, fmt.Errorf("%w: %v", ErrUnknown, err)
 	}
 
-	return DeleteWebhookResponse{}, nil
+	switch res.StatusCode {
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return DeleteWebhookResponse{}, fmt.Errorf("%w: %v", ErrInvalidCredentials, errRes.Message)
+	case http.StatusBadRequest:
+		return DeleteWebhookResponse{}, fmt.Errorf("%w: %v", ErrInvalidRequest, errRes.Message)
+	case http.StatusNotFound:
+		return DeleteWebhookResponse{}, ErrNotFound
+	default:
+		return DeleteWebhookResponse{}, ErrUnknown
+	}
 }
