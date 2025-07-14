@@ -15,7 +15,7 @@ SELECT
   endpoint,
   description
 FROM webhooks
-WHERE id = @webhookID;
+WHERE id = @ID;
 
 -- name: CreateWebhook :one
 INSERT INTO webhooks (
@@ -36,4 +36,4 @@ INSERT INTO webhooks (
 
 -- name: DeleteWebhook :exec
 DELETE from webhooks
-WHERE id = @webhookID
+WHERE id = @ID
