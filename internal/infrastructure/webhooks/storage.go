@@ -26,6 +26,32 @@ func NewStorage(l *slog.Logger, db *sql.DB) *Storage {
 	}
 }
 
+func (s *Storage) WithTx(ctx context.Context, cb func(s *Storage) error) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	cbErr := cb(&Storage{
+		logger:  s.logger,
+		db:      s.db,
+		queries: s.queries.WithTx(tx),
+	})
+	if cbErr != nil {
+		if err := tx.Rollback(); err != nil {
+			return err
+		}
+
+		return cbErr
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *Storage) GetAll(ctx context.Context) (GetAllResponse, error) {
 	rows, err := s.queries.GetAllWebhooks(ctx)
 	if err != nil {
@@ -65,6 +91,34 @@ func (s *Storage) GetByID(ctx context.Context, id int) (GetByIdResponse, error) 
 	}
 
 	return GetByIdResponse{
+		Webhook: w,
+	}, nil
+}
+
+func (s *Storage) GetByParams(ctx context.Context, eventType, contextType, contextID, endpoint string) (GetByParamsResponse, error) {
+	row, err := s.queries.GetWebhookByParams(ctx, database.GetWebhookByParamsParams{
+		EventType:   eventType,
+		ContextType: contextType,
+		ContextID:   contextID,
+		Endpoint:    endpoint,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return GetByParamsResponse{}, ErrNotFound
+		}
+
+		return GetByParamsResponse{}, fmt.Errorf("%w: %v", ErrInternal, err)
+	}
+
+	w := Webhook{
+		EventType:   row.EventType,
+		ContextType: row.ContextType,
+		ContextID:   row.ContextID,
+		Endpoint:    row.Endpoint,
+		Description: row.Description.String,
+	}
+
+	return GetByParamsResponse{
 		Webhook: w,
 	}, nil
 }

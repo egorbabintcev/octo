@@ -16,6 +16,10 @@ type GetByIdResponse struct {
 	Webhook Webhook
 }
 
+type GetByParamsResponse struct {
+	Webhook Webhook
+}
+
 type CreateResponse struct {
 	ID int
 }
