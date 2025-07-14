@@ -26,32 +26,6 @@ func NewStorage(l *slog.Logger, db *sql.DB) *Storage {
 	}
 }
 
-func (s *Storage) WithTx(ctx context.Context, cb func(s *Storage) error) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	cbErr := cb(&Storage{
-		logger:  s.logger,
-		db:      s.db,
-		queries: s.queries.WithTx(tx),
-	})
-	if cbErr != nil {
-		if err := tx.Rollback(); err != nil {
-			return err
-		}
-
-		return cbErr
-	}
-
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (s *Storage) GetAll(ctx context.Context) (GetAllResponse, error) {
 	rows, err := s.queries.GetAllWebhooks(ctx)
 	if err != nil {
